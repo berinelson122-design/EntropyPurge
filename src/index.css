@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+@theme {
+    --color-cyber-red: #FF003C;
+    --color-neon-violet: #E056FD;
+}
+
+:root {
+    background-color: #000000;
+    color: #E5E5E5;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+body {
+    margin: 0;
+    overflow: hidden;
+}
+
+/* SCANLINES */
+body::after {
+    content: " ";
+    display: block;
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 100;
+    background: linear-gradient(rgba(18, 18, 18, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
+    background-size: 100% 4px;
+}
