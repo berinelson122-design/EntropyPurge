@@ -27,3 +27,25 @@ body::after {
     background: linear-gradient(rgba(18, 18, 18, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
     background-size: 100% 4px;
 }
+
+/* FORCE_PHYSICAL_BOUNDS */
+#game-container {
+    width: 800px;
+    height: 600px;
+    border: 2px solid rgba(224, 86, 253, 0.2);
+    background: #000;
+    box-shadow: 0 0 40px rgba(224, 86, 253, 0.1);
+}
+
+canvas {
+    display: block;
+    /* Eliminate the baseline gap */
+}
+
+/* src/index.css */
+
+/* Add this specifically for the Phaser container div */
+canvas {
+    display: block;
+    outline: none;
+}
