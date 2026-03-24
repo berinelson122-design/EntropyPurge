@@ -1,0 +1,16 @@
+.vercel
+node_modules/
+dist/
+build/
+
+.env
+.env.local
+
+.DS_Store
+Thumbs.db
+.gitignore
+.earaser.py
+wrangler.toml
+package-lock.json
+package.json
+tscongic.json

@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 
 export interface PlayerStats {
+  score: number;
   lvl: number;
   xp: number;
   nextLvl: number;
@@ -16,7 +17,13 @@ export class MainScene extends Phaser.Scene {
   private bullets!: Phaser.Physics.Arcade.Group;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasd!: any;
+  private grid!: Phaser.GameObjects.Grid;
+  private overclocked: boolean = false;
+  private corrupted: boolean = false;
+  private purged: boolean = false;
+  
   private stats: PlayerStats = {
+    score: 0,
     lvl: 1,
     xp: 0,
     nextLvl: 100,
@@ -34,7 +41,7 @@ export class MainScene extends Phaser.Scene {
     const { width, height } = this.scale;
 
     // 1. INCREASE GRID ALPHA (0.05 -> 0.2) for better visibility
-    this.add.grid(width / 2, height / 2, width * 2, height * 2, 40, 40, 0, 0, 0xE056FD, 0.2);
+    this.grid = this.add.grid(width / 2, height / 2, width * 2, height * 2, 40, 40, 0, 0, 0xE056FD, 0.2);
 
     // 2. ENSURE PLAYER Z-INDEX
     this.player = this.add.rectangle(width / 2, height / 2, 24, 24, 0xFFFFFF).setDepth(1);
@@ -91,12 +98,22 @@ export class MainScene extends Phaser.Scene {
     // ENEMY MOVEMENT
     this.enemies.getChildren().forEach((enemy: any) => {
       if (enemy.active) {
-        this.physics.moveToObject(enemy, this.player, 80 + (this.stats.lvl * 5));
+        const speedBase = 80 + (this.stats.lvl * 5);
+        const finalSpeed = this.overclocked ? speedBase * 1.5 : speedBase;
+        this.physics.moveToObject(enemy, this.player, finalSpeed);
       }
     });
 
+    // KERNEL CORRUPTION VISUALS
+    if (this.corrupted) {
+      const pulse = (Math.sin(time / 150) + 1) / 2;
+      this.grid.setOutlineStyle(0xFF003C, 0.2 + pulse * 0.6);
+    }
+
     // UPDATE SPAWN RATE
-    const spawnDelay = Math.max(200, 1000 - (this.stats.lvl * 50));
+    let spawnDelay = Math.max(200, 1000 - (this.stats.lvl * 50));
+    if (this.purged) spawnDelay /= 2;
+
     if (time > this.lastSpawned) {
       this.spawnEnemy();
       this.lastSpawned = time + spawnDelay;
@@ -135,11 +152,40 @@ export class MainScene extends Phaser.Scene {
     if (bullet.active) bullet.destroy();
     if (enemy.active) enemy.destroy();
     
+    this.stats.score += 10;
     this.stats.xp += 20;
+
+    this.game.events.emit('SCORE_UPDATE', this.stats.score);
+    this.checkMilestones();
 
     if (this.stats.xp >= this.stats.nextLvl) {
       this.levelUp();
     }
+  }
+
+  private checkMilestones() {
+    if (!this.overclocked && this.stats.score >= 500) {
+      this.overclocked = true;
+      this.game.events.emit('SYS_MSG', 'SYSTEM OVERCLOCK: ENEMY SPEED +50%');
+    }
+    if (!this.corrupted && this.stats.score >= 1500) {
+      this.corrupted = true;
+      this.game.events.emit('SYS_MSG', 'KERNEL CORRUPTION: GRID COMPROMISED');
+    }
+    if (!this.purged && this.stats.score >= 3000) {
+      this.purged = true;
+      this.massPurge();
+    }
+  }
+
+  private massPurge() {
+    this.cameras.main.flash(800, 255, 0, 60);
+    this.enemies.getChildren().forEach((enemy: any) => {
+      if (enemy.active) {
+        enemy.destroy();
+      }
+    });
+    this.game.events.emit('SYS_MSG', 'MASS PURGE EXECUTED: THREAT MULTIPLIED');
   }
 
   private handlePlayerDamage(playerObj: Phaser.GameObjects.GameObject, enemyObj: Phaser.GameObjects.GameObject) {
@@ -163,6 +209,7 @@ export class MainScene extends Phaser.Scene {
       
       // Reset stats naturally by not preserving them 
       this.stats = {
+        score: 0,
         lvl: 1,
         xp: 0,
         nextLvl: 100,
@@ -171,7 +218,12 @@ export class MainScene extends Phaser.Scene {
         health: 100,
         isHurt: false
       };
+      this.overclocked = false;
+      this.corrupted = false;
+      this.purged = false;
+      
       // Reset react ui
+      this.game.events.emit('SCORE_UPDATE', 0);
       this.game.events.emit('LEVEL_UP', 1);
       // Wait for React to reset state before resuming
       setTimeout(() => {

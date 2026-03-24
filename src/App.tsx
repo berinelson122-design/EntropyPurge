@@ -7,7 +7,7 @@ import { Activity } from 'lucide-react';
 const App: React.FC = () => {
     const gameRef = useRef<HTMLDivElement>(null);
     const gameInstance = useRef<Phaser.Game | null>(null);
-    const [gameState, setGameState] = useState({ level: 1, isLeveling: false });
+    const [gameState, setGameState] = useState({ level: 1, isLeveling: false, score: 0, sysMsg: null as string | null });
 
     useEffect(() => {
         // 1. HARDWARE GUARD: Ensure the DOM node exists and game isn't already running
@@ -38,6 +38,15 @@ const App: React.FC = () => {
             setGameState(s => ({ ...s, isLeveling: true, level: lvl }));
             // Instead of pausing here, we let the scene handle the transition
         });
+        game.events.on('SCORE_UPDATE', (score: number) => {
+            setGameState(s => ({ ...s, score }));
+        });
+        game.events.on('SYS_MSG', (msg: string) => {
+            setGameState(s => ({ ...s, sysMsg: msg }));
+            setTimeout(() => {
+                setGameState(s => (s.sysMsg === msg ? { ...s, sysMsg: null } : s));
+            }, 4000);
+        });
 
         // 5. DESTRUCTION PROTOCOL (Cleanup)
         return () => {
@@ -63,15 +72,33 @@ const App: React.FC = () => {
             <div ref={gameRef} id="game-container" className="border-2 border-white/10 shadow-[0_0_50px_rgba(224,86,253,0.1)]" />
 
             {/* REACT HUD OVERLAY */}
-            <div className="absolute top-8 left-8 pointer-events-none z-20">
-                <div className="flex items-center gap-2 text-[#E056FD] mb-2">
-                    <Activity size={14} className="animate-pulse" />
-                    <span className="text-[10px] uppercase tracking-widest">Kernel_Uptime</span>
+            <div className="absolute top-8 left-8 pointer-events-none z-20 flex flex-col gap-6">
+                <div>
+                    <div className="flex items-center gap-2 text-[#E056FD] mb-2">
+                        <Activity size={14} className="animate-pulse" />
+                        <span className="text-[10px] uppercase tracking-widest">Kernel_Uptime</span>
+                    </div>
+                    <div className="text-4xl font-black text-white italic uppercase tracking-tighter shadow-black drop-shadow-lg">
+                        LVL_{gameState.level.toString().padStart(2, '0')}
+                    </div>
                 </div>
-                <div className="text-4xl font-black text-white italic uppercase tracking-tighter">
-                    LVL_{gameState.level.toString().padStart(2, '0')}
+                <div>
+                    <div className="text-[10px] text-[#00F3FF] uppercase tracking-widest mb-1">Entropy_Mined</div>
+                    <div className="text-3xl font-black text-white tracking-widest shadow-black drop-shadow-lg">
+                        {gameState.score.toString().padStart(6, '0')}
+                    </div>
                 </div>
             </div>
+
+            {/* SYSTEM ALERTS OVERLAY */}
+            {gameState.sysMsg && (
+                <div className="absolute top-24 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
+                    <div className="bg-[#FF003C]/20 border-l-4 border-r-4 border-[#FF003C] text-[#FF003C] px-8 py-3 font-black uppercase tracking-widest text-lg backdrop-blur-sm relative overflow-hidden animate-pulse shadow-[0_0_30px_rgba(255,0,60,0.4)]">
+                        <div className="absolute inset-0 bg-[#FF003C] opacity-10"></div>
+                        [ {gameState.sysMsg} ]
+                    </div>
+                </div>
+            )}
 
             {/* UPGRADE INTERFACE */}
             {gameState.isLeveling && (
